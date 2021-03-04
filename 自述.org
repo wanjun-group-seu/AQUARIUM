@@ -1,0 +1,53 @@
+
+
+* circular RNA 定量流程说明
+
+本流程关注与转录组测序数据的分析,着重于环状RNA的检测与定量分析. 
+
+代码可从 https://github.com/zerodel/working_pipe_line 得到. 
+
+
+
+** 使用 basic usage 
+
+*** 如何安装
+本流程使用python与R写成.所以安装本流程之前需要确保系统上Python 与R以及安装完毕. 
+
+**** 安装之前
+python 与R的要求. 
+
+流程需要Python3环境. 建议使用anaconda建立的Python 环境.
+
+R 语言环境的建立可以从cran 站点获得. 
+
+**** 简单得安装
+
+如果操作系统中已经安装了git, 那么可以直接在命令行中使用如下命令来安装 
+
+#+BEGIN_SOURCE Bash
+git clone https://github.com/zerodel/working_pipe_line.git
+#+END_SOURCE
+
+如果系统中尚未安装git, 那么可以使用
+
+
+
+*** 如何查询帮助
+
+
+
+*** 如何写/修改配置文件
+
+** 配置文件 how to write a config file 
+
+** 代码结构 source structure 
+
+*** 思路
+*** 内部结构
+
+
+
+** 常见的可能问题, 以及解决方法 trouble shooting
+
+
+
