@@ -8,8 +8,6 @@ By writing a single configuration file, This pipeline can perform the detection 
 
 This avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
 
-<!-- 这个文档用来说明如何安装流程, 能让它运行起来.  -->
-
 ## Installation 
 
 This pipeline does not need to be compiled, but it will only run successfully with the help of depended packages
@@ -18,15 +16,13 @@ This pipeline does not need to be compiled, but it will only run successfully wi
 
 If [git](https://git-scm.com) is installed, you can download this pipeline using following command.
 
-<!-- todo 修改为最终路径 -->
 ``` bash
-git clone 
+git clone https://github.com/wanjun-group-seu/AQUARIUM
 ```
 
-<!-- todo 下载的路径 -->
 You can also download the package as a zip file and unzip it manually.
 
-Also [Python 3](https://www.python.org) and [R](https://www.r-project.org) need to be installed before you can proceed with the following steps.
+[Python 3](https://www.python.org) and [R](https://www.r-project.org) need to be installed before you can proceed with the following steps.
 
 ### dependencies: python
 
@@ -56,12 +52,11 @@ BiocManager::install("GenomicFeatures")
 
 ```
 
-If you need to install  `Biostrings` `rtracklayer` `GenomicFeatures` in an older version of R that does not work with `BiocManager`, 
-please check bioconductor page of these packages.
+If you need to install  `Biostrings` `rtracklayer` `GenomicFeatures` in an older version of R that does not work with `BiocManager`, please check `bioconductor` page of these packages.
 
 ### Adjust configuration template
 
-The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. Each time you invoke `new_config.py`, you're actually making a copy of this file.
+The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. When you invoke [new_config.py](#get config file), you're actually making a copy of this file.
 
 This template is almost empty after a fresh installation. 
 You can modify this file to save your time in future use.
@@ -72,14 +67,14 @@ More details can be found in [instructions config](#configure-file)
 
 Here we will show how to perform a simple but complete analysis after the installation of pipeline.
 
-<!-- 准备数据文件 -->
-### data preparation 
+### data preparation
+
 <!-- 从网盘上下载数据文件 -->
 You can download a minimal dataset for testing from [test_data]()
 
 Inside this dataset, 
 
-### Compose the configuration file
+### get config file
 
 By invoking new_config.py, you will get a copy of the template. then you can modify this config file to guide your analysis.
 
@@ -91,9 +86,9 @@ new_config.py target
 
 `target` is the place where your configuration file will be found.
 
-If this `target` is an existing folder, then a default.cfg file will appear in this folder.
+If this `target` is an existing folder, then a `default.cfg` file will appear in this folder.
 
-### modifiy this configure file
+### modify this configure file
 
 If you have modified the template after installation, then the changes you have made are already in effect on this copy. 
 
@@ -102,19 +97,16 @@ Before you modify the configuration file, it is recommended that you read [instr
 
 ### build the annotation database manually (optional)
 
-During the process, we will create a binary database file for GTF in order to query the genome information faster.
-This '.db' database file will share base name with the GTF file and will locate in the same folder.
+During the process, we will create a binary database file for GTF in order to query the genome information faster. This '.db' database file will share base name with the GTF file and will locate in the same folder.
 
 However, since there are different versions of GTF files for different species.
 So creating the database may encounter some unexpected problems.
 
 For this reason, a prudent solution is to create the relevant database manually
 
+<!-- todo: 如何手工建立db 文件 -->
 
-
-<!-- 这个文档用来解释config文件的结构与内容 -->
-
-## configure file 
+## configure file
 
 We use an `ini` format configuration file to set all parameters in the process.
 
@@ -149,7 +141,9 @@ Section `CUSTOM` is used to store the information corresponding to a single samp
 
 The subsequent sections are related to specific analysis steps, with more information available in `info.py`.
 
-### modify the configure file with the help of info.py
+### make use of info.py
+
+ you can invoke info.py to check whether the relevant package has been installed or not. 
 
 During the installation process, you can invoke info.py to check whether the relevant package has been installed or not. 
 
@@ -181,10 +175,10 @@ star    -        STAR : a junction sensitive aligner
 
 ```
 
-Here, it prompts you to select an item in the list for more information. Each of these items corresponding to a section in the configuration file. `detect_circRNA` `profile_circRNA` are the two main steps of the process. They correspond to the scripts wf_detect_circRNA.py
-and wf_profile_linear.py
+Here, it prompts you to select an item in the list for more information. Each of these items corresponding to a section in the configuration file. `detect_circRNA` `profile_circRNA` are the two main steps of the process. They correspond to the scripts `wf_detect_circRNA.py`
+and `wf_profile_linear.py`
 
-Here we look up the parameters of profile_circRNA:
+Here we look up the parameters of `profile_circRNA`:
 
 ``` bash
 
@@ -274,7 +268,7 @@ Also, You may notice some commented out key-value pairs. With the help of info.p
 
 ***All path should be absolute path***
 
-### FAQ of configuration
+### FAQ 
 
 #### Q: How to complete the parameters in the META section?
 
