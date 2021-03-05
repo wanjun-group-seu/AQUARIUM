@@ -69,5 +69,5 @@ def _do_detect_circular_isoform(name_of_detector, user_config):
 if __name__ == "__main__":
     arg_parser = __cli_arg_parser()
     args = arg_parser.parse_args()
-    _logger = pysrc.body.logger.set_logger_file(_logger, args.log_file)
+   # _logger = pysrc.body.logger.set_logger_file(_logger, args.log_file)
     main(args.cfg_file)

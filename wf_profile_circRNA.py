@@ -557,5 +557,5 @@ def _post_quantify(sf_in, anno, tab_out):
 if __name__ == "__main__":
     arg_parser = __cli_arg_parser()
     cl_args = arg_parser.parse_args()
-    _logger = pysrc.body.logger.set_logger_file(_logger, cl_args.log_file)
+#    _logger = pysrc.body.logger.set_logger_file(_logger, cl_args.log_file)
     main(cl_args.cfg_file, forced_refresh=cl_args.force)

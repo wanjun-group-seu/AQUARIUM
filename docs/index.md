@@ -8,14 +8,9 @@ By writing a single configuration file, This pipeline can perform the detection 
 
 This avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
 
-## Quick start
 
-1. download AQUARIUM and Set up
-2. modifiy the configuration file on your will
-3. run analysis
 
-## Documentation
+## [installation](./doc_install.md)
 
-## FAQ
+## [quick_start](./quick_example.md)
 
-<!-- 最常见的问题 -->

@@ -50,8 +50,11 @@ BiocManager::install("GenomicFeatures")
 
 If you need to install  `Biostrings` `rtracklayer` `GenomicFeatures` in an older version of R that does not work with `BiocManager`, please check bioconductor page of these packages.
 
-## modify the default configuration
+## modify the default configuration template
 
 The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. Each time you invoke `new_config.py`, you're actually making a copy of this file.
 
-You can modify this file for future use. More details can be found in `conf.md`
+This template is almost empty after a fresh installation. 
+You can modify this file to save your time in future use.
+
+More details can be found in `conf.md`
