@@ -1,7 +1,7 @@
 ---
-Installation: doc_install.md
-Configuration: conf.md
-QuickExample: quick_example.md
+Installation: ./doc_install.md
+Configuration: ./conf.md
+QuickExample: ./quick_example.md
 ---
 
 
