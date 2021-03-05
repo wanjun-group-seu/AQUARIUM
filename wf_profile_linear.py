@@ -51,7 +51,7 @@ def get_value_from_global_section(user_config_whole, key_name):
 def __cli_arg_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("cfg_file", help="file path to a configuration file of isoform detection")
-    parser.add_argument("-l", "--log_file", help="logging file path", default="")
+    # parser.add_argument("-l", "--log_file", help="logging file path", default="")
     return parser
 
 

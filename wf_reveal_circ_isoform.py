@@ -35,7 +35,7 @@ _OPT_KEY_ISOFORM_DETECTOR = "isoform_detector"
 def __cli_arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("cfg_file", help="file path to a configuration file of isoform detection")
-    parser.add_argument("-l", "--log_file", help="logging file path", default="")
+    # parser.add_argument("-l", "--log_file", help="logging file path", default="")
     return parser
 
 

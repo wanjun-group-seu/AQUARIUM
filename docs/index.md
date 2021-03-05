@@ -4,35 +4,40 @@
 
 AQUARIUM(Accurate QUAntification of Rnas with cIrcUlar isoforMs) is a bioinformatics analysis pipe line for circular RNA sequencing data.
 
-By writing a single configuration file, This pipeline can perform the detection and quantification of circular RNA. In the Quantification results of this tool, the relative expression abundunce of circular and linear RNAs are unified under the same standard.
+This pipeline can determine the relative abundance of both linear and circRNA in RNA-seq data under the guidance of a configuration file.
 
+In the Quantification results of this tool, the relative expression abundunce of circular and linear RNAs are unified under the same standard.
 This avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
 
-## Installation 
+## Installation
 
-This pipeline does not need to be compiled, but it will only run successfully with the help of depended packages
+### install step 1: download code
 
-### Fresh Installation
+This pipeline does not need compilation. You can download the package directly from the [project homepage](https://github.com/wanjun-group-seu/AQUARIUM) as a zip file and unzip it manually.
 
-If [git](https://git-scm.com) is installed, you can download this pipeline using following command.
+If [git](https://git-scm.com) is installed, you can also download this pipeline using following command.
 
 ``` bash
 git clone https://github.com/wanjun-group-seu/AQUARIUM
 ```
 
-You can also download the package as a zip file and unzip it manually.
-
 [Python 3](https://www.python.org) and [R](https://www.r-project.org) need to be installed before you can proceed with the following steps.
 
-### dependencies: python
+### install step 2: python packages
 
-A versatile helper script `info.py` is provided by this pipeline . 
+This pipeline requires [biopython](https://biopython.org) and [gffutils](https://pythonhosted.org/gffutils/).
 
-When this script is invoked in command line, it first checks whether the software-related python packages are installed properly. 
+But if you are not sure whether you have installed the relevant package or not.
+you can use a versatile helper script `info.py`:
 
-It will report an error once any python package is not installed. users can check the error message to find the missing package.
+```bash
+python path/to/your/AQUARIUM/info.py
+```
 
-### dependencies: R
+When this script is invoked in command line, it first checks whether the software-related python packages are installed properly.
+It will report an error once any python package is not installed properly. You can check the error message to find the missing package.
+
+### install step 3: R packages
 
 These R package may be required for analysis: `tidyverse`, `Biostrings` , `rtracklayer`, `GenomicFeatures`, the latter 3 packages are part of  [bioconductor](https://www.bioconductor.org).
 
@@ -54,14 +59,32 @@ BiocManager::install("GenomicFeatures")
 
 If you need to install  `Biostrings` `rtracklayer` `GenomicFeatures` in an older version of R that does not work with `BiocManager`, please check `bioconductor` page of these packages.
 
-### Adjust configuration template
+### install step 4: adjust configuration template
 
-The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. When you invoke [new_config.py](#get config file), you're actually making a copy of this file.
+In order to use this pipeline to analyze the data, a configuration file is essential.
+But instead of writing it from scratch, you can call `new_config.py` to create a new one, and then modify it.
+
+The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. 
+When you invoke [new_config.py](#get-config-file), you're actually making a copy of this file.
 
 This template is almost empty after a fresh installation. 
 You can modify this file to save your time in future use.
 
-More details can be found in [instructions config](#configure-file)
+More details can be found in [instructions on config file](#configure-file)
+
+## CLI interface and Usage
+
+The main command line interface for circRNA profiling is `wf_profile_circRNA.py`. 
+
+You can luanch it as follows:
+
+```bash
+python wf_profile_circRNA.py config_file
+```
+
+Its only argument is the path of config file, which contains the information needed to analyze a single sample.
+
+So, before calling this interface, you can [get a config copy](#get-config-file) and then [modify it](#modify-modules)
 
 ## Example
 
@@ -92,8 +115,10 @@ If this `target` is an existing folder, then a `default.cfg` file will appear in
 
 If you have modified the template after installation, then the changes you have made are already in effect on this copy. 
 
-Before you modify the configuration file, it is recommended that you read [instructions on configure file ](./conf.md)
+Before you modify the configuration file, it is recommended that you read [instructions on configure file](#configure-file)
 
+
+### Run the pipeline
 
 ### build the annotation database manually (optional)
 
@@ -106,7 +131,7 @@ For this reason, a prudent solution is to create the relevant database manually
 
 <!-- todo: 如何手工建立db 文件 -->
 
-## configure file
+## Configure File
 
 We use an `ini` format configuration file to set all parameters in the process.
 
@@ -116,7 +141,7 @@ Typically, a single sample corresponds to a single configuration file.
 
 For large-scale analysis of multiple samples, users can start by writing a configuration file template, and then use character substitution to obtain multiple configuration files.
 
-### file structure
+### structure of config
 
 The configuration file is a plain text file that follows the syntax of the `ini` file.
 
@@ -128,7 +153,9 @@ keyname1=value1
 keyname2=value2
 keyname3=${A:b}
 ```
-You might see a lot of sections in this file, but don't worry, only some of them will be used in each  operation. These sections can be divided into two categories, the first three sections are required for all types of analysis, and the other sections correspond to different types of analysis.
+You might see a lot of sections in this file, but don't worry, only some of them will be used in each  operation. 
+
+These sections can be divided into two categories, first three sections are required for all analysis modules, and the other sections correspond to different module of analysis.
 
 The first three sections meta/global/custom store the paths to the necessary files for the analysis process.
 
@@ -139,20 +166,18 @@ Section `GLOBAL` includes information that is invariant in the analysis of the s
 Section `CUSTOM` is used to store the information corresponding to a single sample. and some user-defined variables.
 
 
-The subsequent sections are related to specific analysis steps, with more information available in `info.py`.
+The subsequent sections are related to specific analysis modules, with more information available in `info.py`.
 
-### make use of info.py
+### modify modules
 
- you can invoke info.py to check whether the relevant package has been installed or not. 
+To facilitate your modification of the parameters of each module, you need to use `info.py`.
 
-During the installation process, you can invoke info.py to check whether the relevant package has been installed or not. 
-
-After the installation is complete, info.py is also used to query the information for each analysis step.
+This is a multi-purpose script. During the installation process, you can invoke info.py to check whether the relevant package has been installed or not. After the installation is complete, info.py is also used to query the information for each analysis step.
 
 If the software-related packages are installed correctly, invoking info.py without parameters will give you the following information:
 
 ``` bash
-python ~/project/working_pipe_line/info.py
+python path/to/your/AQUARIUM/info.py
 
 this pipeline now has following wrappers, choose one to see more information
 
@@ -182,7 +207,7 @@ Here we look up the parameters of `profile_circRNA`:
 
 ``` bash
 
--> % python ~/project/working_pipe_line/info.py detect_circRNA
+-> % python path/to/your/AQUARIUM/info.py detect_circRNA
 
 [CIRC_PROFILE]
 # this section [CIRC_PROFILE] contains following options:

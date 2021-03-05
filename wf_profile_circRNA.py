@@ -68,10 +68,10 @@ def __cli_arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "cfg_file", help="file path to a configuration file of detection job")
-    parser.add_argument("-l", "--log_file",
-                        help="logging file path", default="")
-    parser.add_argument(
-        "-f", "--force", help="forced refresh", action="store_true")
+    # parser.add_argument("-l", "--log_file",
+    #                     help="logging file path", default="")
+    # parser.add_argument(
+    #     "-f", "--force", help="forced refresh", action="store_true")
     return parser
 
 
