@@ -422,7 +422,7 @@ def main(path_config, forced_refresh=False):
     #     gtf_annotation=final_annotation)
 
     _post_quantify(sf_in=os.path.join(opts_quantifier["--output"], "quant.sf"),
-                   anno=opts_quantifier["geneMap"],
+                   anno=opts_quantifier["--geneMap"],
                    tab_out=os.path.join(opts_quantifier["--output"], "post_ratio.tab"))
 
 
