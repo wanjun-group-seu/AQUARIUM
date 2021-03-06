@@ -95,9 +95,11 @@ You can luanch it as follows:
 python wf_profile_circRNA.py config_file
 ```
 
-Its only argument is the path of config file, which contains the information needed to analyze a single sample.
+The only argument is the path of config file. 
+It contains the information needed to analyze a single sample, 
+where is the input files , where is the output files, the parameters of certain steps, etc.
 
-So, before calling this interface, you can [get a config copy](#get-config-file) and then [modify it](#modify-modules)
+Before calling this interface, you can [get a config copy](#get-config-file) and then [modify it](#modify-modules)
 
 ## Example
 
@@ -155,6 +157,8 @@ It will output a lot of log messages to the screen. So you can use the `nohup` c
 ```bash
 nohup python path/to/AQUARIUM/wf_profile_circRNA.py some.cfg &
 ```
+
+You can find a `quant.sf` with RNA expression levels in the folder specified by the `-o` parameter in the `CIRC_PROFILE` section of configration. 
 
 ## Troubleshooting
 
