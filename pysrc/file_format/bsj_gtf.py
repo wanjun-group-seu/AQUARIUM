@@ -36,7 +36,8 @@ class PredictedCircularRegion(object):
             self.predict_id = kwargs.get("given_id")
             self.strand = kwargs.get("strand")
         else:
-            raise NameError("Error@PredictedCircularRegion: wrong arguments given")
+            raise NameError(
+                "Error@PredictedCircularRegion: wrong arguments given")
 
     def is_flanking(self, gff_feature):
         return self.start <= int(gff_feature.start) and self.end >= int(gff_feature.end)
@@ -51,10 +52,12 @@ class PredictedCircularRegion(object):
             corresponding_circular_exons = [exon for exon in
                                             gffutils_database.children(linear_isoform.id, featuretype="exon",
                                                                        order_by="start",
-                                                                       limit=(self.seqid, self.start, self.end),
+                                                                       limit=(
+                                                                           self.seqid, self.start, self.end),
                                                                        completely_within=True)]
             if corresponding_circular_exons:
-                transcript_exon_dict.setdefault(linear_isoform.id, corresponding_circular_exons)
+                transcript_exon_dict.setdefault(
+                    linear_isoform.id, corresponding_circular_exons)
 
         return transcript_exon_dict
 
@@ -104,7 +107,8 @@ class PredictedCircularRegion(object):
             if exon_end > self.end + OVERLAP_WINDOW_WIDTH:
                 exon_end = self.end
 
-            exon_filtered.append((exon_seqid, exon_source, exon_start, exon_end, exon_strand.strip(), exon_frame))
+            exon_filtered.append(
+                (exon_seqid, exon_source, exon_start, exon_end, exon_strand.strip(), exon_frame))
 
         exon_filtered = sorted(exon_filtered, key=lambda exon_str: exon_str[2])
 
@@ -122,7 +126,8 @@ class PredictedCircularRegion(object):
             # [2019_10_15 17:34], add .r only when the region strand is unclear and exon are on reverse strand
             is_this_region_stand_clear = self.strand in {"+", "-"}
             transcript_on_reverse_strand = exon_strand == "-" and not is_this_region_stand_clear
-            transcript_id_show_strand = "%s.r" % transcript_id.strip() if transcript_on_reverse_strand else transcript_id.strip()
+            transcript_id_show_strand = "%s.r" % transcript_id.strip(
+            ) if transcript_on_reverse_strand else transcript_id.strip()
 
             neo_isoform = self.generate_exon_for_circular_isoform(host_seqname=exon_seqid, start=exon_start,
                                                                   end=exon_end,
@@ -146,7 +151,8 @@ class PredictedCircularRegion(object):
 
     @staticmethod
     def simplify_this_feature(feature_from_gffutils_db, new_source="", new_transcript_id=""):
-        artificial_exon = pysrc.file_format.gtf.GTFItem(str(feature_from_gffutils_db))
+        artificial_exon = pysrc.file_format.gtf.GTFItem(
+            str(feature_from_gffutils_db))
         formal_gene_id = artificial_exon.get_gene_id()
         formal_trans_id = artificial_exon.get_transcript_id()
         artificial_exon.init_null_attribute()
@@ -174,7 +180,7 @@ def parse_bed_line(line):
 def parse_ciri_line(line):
     entry_ciri = pysrc.file_format.ciri_entry.CIRIEntry(line)
     return entry_ciri.id_show_host, entry_ciri.obj.chr, entry_ciri.obj.circRNA_start, entry_ciri.obj.circRNA_end, \
-           entry_ciri.obj.strand
+        entry_ciri.obj.strand
 
 
 def parse_ciri_as_region(ciri_output, comment_char="#"):
@@ -197,12 +203,14 @@ def get_gff_database(gtf_file):
     file_body_name, file_suffix = os.path.splitext(file_part)
 
     if ".gtf" == file_suffix:
-        db_file_path = os.path.join(path_main, ".".join([file_body_name, "db"]))
+        db_file_path = os.path.join(
+            path_main, ".".join([file_body_name, "db"]))
         if os.path.exists(db_file_path):
             db = gffutils.FeatureDB(db_file_path)
         else:
             # @WARNING: different version of GTF will make this process time exhausting
-            _logger.warning("Please check GTF file version. it is strongly recommended to build GTF database manually")
+            _logger.warning(
+                "Please check GTF file version. it is strongly recommended to build GTF database manually")
             db = gffutils.create_db(gtf_file, db_file_path)
 
     elif ".db" == file_suffix:
@@ -242,7 +250,8 @@ def _get_exons_with_isoforms(intervals_and_gff_path):
     res = []
     for reg in regs:
         flanked_linear_entries = reg.extract_flanked_linear_entries(gff_db)
-        exons_marked_circular = reg.mark_extracted_exons(flanked_linear_entries)
+        exons_marked_circular = reg.mark_extracted_exons(
+            flanked_linear_entries)
         res.extend(exons_marked_circular)
     return res
 
@@ -251,15 +260,16 @@ def _all_exons_as_list(exons):
     return list(exons)
 
 
-def get_gtf_mp(path_bed, gff_db, is_structure_show=False, num_process=0):
-    regions = load_region_from_file(path_bed)
+def get_gtf_mp(regions, gff_db, is_structure_show=False, num_process=1):
 
-    region_groups_for_each_cpu = equal_divide(regions, num_process)
+    region_groups_for_each_cpu = equal_divide(
+        regions, num_process) if num_process > 1 else regions
 
-    gff_db_each_cpu = [gff_db] * num_process if num_process else [gff_db]
+    gff_db_each_cpu = [gff_db] * num_process if num_process > 1 else [gff_db]
 
     if is_structure_show:
-        a = SimpleMapReduce(_get_exons_with_isoforms, _all_exons_as_list, num_process)
+        a = SimpleMapReduce(_get_exons_with_isoforms,
+                            _all_exons_as_list, num_process)
     else:
         a = SimpleMapReduce(_get_exons, _all_exons_as_list, num_process)
 
@@ -268,7 +278,8 @@ def get_gtf_mp(path_bed, gff_db, is_structure_show=False, num_process=0):
 
 
 def load_region_from_file(path_bed):
-    func_to_get_region = parse_bed_as_region if path_bed.endswith(".bed") else parse_ciri_as_region
+    func_to_get_region = parse_bed_as_region if path_bed.endswith(
+        ".bed") else parse_ciri_as_region
     regions = list(func_to_get_region(path_bed))
     return regions
 
@@ -277,14 +288,16 @@ def equal_divide(regs, num_process):
     if isinstance(num_process, int):
 
         if num_process > len(regs):
-            _logger.warning("too less regions , even less than cpu core numbers")
+            _logger.warning(
+                "too less regions , even less than cpu core numbers")
             return [[x] for x in regs]
         else:
             size_chunk = int(round(len(regs) / num_process))
             if size_chunk * num_process < len(regs):
                 size_chunk += 1
 
-            _logger.debug("number of regions each cpu core: {}".format(size_chunk))
+            _logger.debug(
+                "number of regions each cpu core: {}".format(size_chunk))
             _logger.debug("number of cpu core: {}".format(num_process))
 
             reg_parts = [regs[x: x + size_chunk] for x in
@@ -292,12 +305,14 @@ def equal_divide(regs, num_process):
 
             return reg_parts
     else:
-        raise TypeError("Error@gtf_processing: process number should be a integer, but got : {}".format(num_process))
+        raise TypeError(
+            "Error@gtf_processing: process number should be a integer, but got : {}".format(num_process))
 
 
 def do_make_gtf_for_circular_prediction_greedy(circular_candidate_regions, gff_db, output_gtf_path_name="",
                                                is_isoform_structure_shown=False):
-    whole_exons = intersect_region_genome_annotation(circular_candidate_regions, gff_db, is_isoform_structure_shown)
+    whole_exons = intersect_region_genome_annotation(
+        circular_candidate_regions, gff_db, is_isoform_structure_shown)
 
     exons_to_gtf_file(whole_exons, output_gtf_path_name)
 
@@ -305,14 +320,25 @@ def do_make_gtf_for_circular_prediction_greedy(circular_candidate_regions, gff_d
 def exons_to_gtf_file(whole_exons, output_gtf_path_name):
     with open(output_gtf_path_name, "w") as out_gtf:
         out_gtf.write("\n".join([str(exon) for exon in whole_exons]))
-        _logger.debug("GTF file already in disk : {}".format(output_gtf_path_name))
+        _logger.debug("GTF file already in disk : {}".format(
+            output_gtf_path_name))
 
 
 def intersect_region_genome_annotation(circular_candidate_regions, genomic_annotation,
                                        is_isoform_structure_shown=False):
     num_core = guess_num_core()
-    _logger.debug("Number of CPU use during GTF generating : {}".format(num_core))
-    whole_exons = get_gtf_mp(path_bed=circular_candidate_regions, gff_db=genomic_annotation,
-                             is_structure_show=is_isoform_structure_shown, num_process=num_core)
+    _logger.debug(
+        "Number of CPU use during GTF generating : {}".format(num_core))
+    regions = load_region_from_file(circular_candidate_regions)
+    if len(regions) > num_core:
+        whole_exons = get_gtf_mp(regions=regions, gff_db=genomic_annotation,
+                                 is_structure_show=is_isoform_structure_shown, num_process=num_core)
+    else:
+        _logger.warning(
+            "regions less than cpu core numbers, using one core only")
+        whole_exons = _get_exons_with_isoforms(
+            (regions, genomic_annotation)) if is_isoform_structure_shown else _get_exons((regions, genomic_annotation))
+        whole_exons = list(whole_exons)
+
     _logger.debug("number of exon in memory : {}".format(len(whole_exons)))
     return whole_exons

@@ -1,3 +1,7 @@
+---
+toc:true
+
+---
 # AQUARIUM - Accurate QUAntification of Rnas with cIrcUlar isoforMs
 
 ## Introduction
@@ -5,9 +9,11 @@
 AQUARIUM(Accurate QUAntification of Rnas with cIrcUlar isoforMs) is a bioinformatics analysis pipe line for circular RNA sequencing data.
 
 This pipeline can determine the relative abundance of both linear and circRNA in RNA-seq data under the guidance of a configuration file.
+Since the relative expression abundunce of circular and linear RNAs are unified under the same standard, it avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
 
-In the Quantification results of this tool, the relative expression abundunce of circular and linear RNAs are unified under the same standard.
-This avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
+It accepts output of circRNA identification tools (CIRI, CIRI-full) or a BED-format file to specify the circular RNA transcripts. Then, it transforms all circular transcripts to pseudo-linear transcripts. Finally, it estimates the expression of both linear and circular transcripts using salmon framework.
+
+
 
 ## Installation
 
@@ -21,9 +27,12 @@ If [git](https://git-scm.com) is installed, you can also download this pipeline 
 git clone https://github.com/wanjun-group-seu/AQUARIUM
 ```
 
+
+### install step 2: prerequisites
+
 [Python 3](https://www.python.org) and [R](https://www.r-project.org) need to be installed before you can proceed with the following steps.
 
-### install step 2: python packages
+#### Python packages
 
 This pipeline requires [biopython](https://biopython.org) and [gffutils](https://pythonhosted.org/gffutils/).
 
@@ -37,7 +46,7 @@ python path/to/your/AQUARIUM/info.py
 When this script is invoked in command line, it first checks whether the software-related python packages are installed properly.
 It will report an error once any python package is not installed properly. You can check the error message to find the missing package.
 
-### install step 3: R packages
+#### R packages
 
 These R package may be required for analysis: `tidyverse`, `Biostrings` , `rtracklayer`, `GenomicFeatures`, the latter 3 packages are part of  [bioconductor](https://www.bioconductor.org).
 
@@ -59,22 +68,26 @@ BiocManager::install("GenomicFeatures")
 
 If you need to install  `Biostrings` `rtracklayer` `GenomicFeatures` in an older version of R that does not work with `BiocManager`, please check `bioconductor` page of these packages.
 
-### install step 4: adjust configuration template
+#### gffread
+
+gffread is part of Cufflinks (http://cole-trapnell-lab.github.io/cufflinks/). This GFF/GTF parsing utility is used to extract sequence.
+
+### install step 3: adjust configuration template
 
 In order to use this pipeline to analyze the data, a configuration file is essential.
 But instead of writing it from scratch, you can call `new_config.py` to create a new one, and then modify it.
 
-The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`. 
+The default configure template lies in the `pysrc/body/default.cpysrc/body/default.cfg`.
 When you invoke [new_config.py](#get-config-file), you're actually making a copy of this file.
 
-This template is almost empty after a fresh installation. 
+This template is almost empty after a fresh installation.
 You can modify this file to save your time in future use.
 
 More details can be found in [instructions on config file](#configure-file)
 
 ## CLI interface and Usage
 
-The main command line interface for circRNA profiling is `wf_profile_circRNA.py`. 
+The main command line interface for circRNA profiling is `wf_profile_circRNA.py`.
 
 You can luanch it as follows:
 
@@ -92,16 +105,18 @@ Here we will show how to perform a simple but complete analysis after the instal
 
 ### data preparation
 
-<!-- 从网盘上下载数据文件 -->
-You can download a minimal dataset for testing from [test_data]()
+You can download a minimal dataset for testing from [MEGA](https://mega.nz/file/ht4mhACS#bSmu5jH_dUu92rK8qoVmpptObydjm89deVsf9cYfK_4).
 
-Inside this dataset, 
+It contains a tiny genome( mt.fa, mt.gtf),pair end sequence data (r1.fq, r2.fq), and a circRNA detection report(circ_mt.report), 
+also a sample config file(your.cfg).
+
+Run this pipeline using that sample config file will cause error, because file path in that cfg file is not correct. And creating a new config file is a more preferable way. But you use it as a guide by searching "TODO" to find what needs to be edited.
 
 ### get config file
 
 By invoking new_config.py, you will get a copy of the template. then you can modify this config file to guide your analysis.
 
-The format of invoking new_config.py is as following: 
+The format of invoking new_config.py is as following:
 
 ```shell
 new_config.py target
@@ -113,12 +128,41 @@ If this `target` is an existing folder, then a `default.cfg` file will appear in
 
 ### modify this configure file
 
-If you have modified the template after installation, then the changes you have made are already in effect on this copy. 
-
 Before you modify the configuration file, it is recommended that you read [instructions on configure file](#configure-file)
 
+If you have modified the template after installation, you may notice that the changes you have made are already in effect on this copy.
+
+With the sample config as a guide, you can modify it by referring to [instructions provided by info.py](#modify-modules).
+
+Here, our goal is to quantify the RNA in the sequencing data. so you can query info.py like this:
+
+```bash
+python path/to/AQUARIUM/info.py profile_circRNA
+```
+
+From its output, we can see that the relevant module is [CIRC_PROFILE].
 
 ### Run the pipeline
+
+After modifying the configuration file, it is time to try running the process.
+
+```bash
+python path/to/AQUARIUM/wf_profile_circRNA.py some.cfg
+```
+
+It will output a lot of log messages to the screen. So you can use the `nohup` command to make it run in the background, like:
+
+```bash
+nohup python path/to/AQUARIUM/wf_profile_circRNA.py some.cfg &
+```
+
+## Troubleshooting
+
+### Examine error messages
+
+When an error occurs, first check the log message.  The error message will be at the end of the screen output. Search the words ERROR and WARING in the LOG message would also help.
+
+If you come across a strange looking error message or find a bug, please do let us know. You submit new issues here: https://github.com/wanjun-group-seu/AQUARIUM/issues
 
 ### build the annotation database manually (optional)
 
@@ -127,9 +171,26 @@ During the process, we will create a binary database file for GTF in order to qu
 However, since there are different versions of GTF files for different species.
 So creating the database may encounter some unexpected problems.
 
-For this reason, a prudent solution is to create the relevant database manually
+For this reason, a prudent solution is to create the relevant database manually with following steps:
 
-<!-- todo: 如何手工建立db 文件 -->
+1. Enter the python interactive environment
+   
+   ```bash
+   python
+   ```
+
+2. call `gffutils.create_db` to build the database.
+   ```python
+    import gffutils
+    gffutils.create_db(gtf_file, db_file_path)
+   ```
+    here, gtf_file is path to your gtf file, db_file_path is where the .db file will locate.
+
+In general it takes about 15 minutes to process the human genome GTF, But if it takes too long, or if it shows a warning, some parameters needs to be tweaked. Get more information by
+
+```python
+help(gffutils.create_db)
+```
 
 ## Configure File
 
@@ -165,8 +226,9 @@ Section `GLOBAL` includes information that is invariant in the analysis of the s
 
 Section `CUSTOM` is used to store the information corresponding to a single sample. and some user-defined variables.
 
-
 The subsequent sections are related to specific analysis modules, with more information available in `info.py`.
+
+In each section you can see a lot of keys reserved as placeholder. You need to refer to the results of info.py to determine which ones are useful.
 
 ### modify modules
 
@@ -200,14 +262,13 @@ star    -        STAR : a junction sensitive aligner
 
 ```
 
-Here, it prompts you to select an item in the list for more information. Each of these items corresponding to a section in the configuration file. `detect_circRNA` `profile_circRNA` are the two main steps of the process. They correspond to the scripts `wf_detect_circRNA.py`
-and `wf_profile_linear.py`
+Here, it prompts you to select an item in the list for more information. Each of these items corresponding to a section in the configuration file.  `profile_circRNA` is the main step of the process. It correspond to `wf_profile_linear.py`
 
 Here we look up the parameters of `profile_circRNA`:
 
 ``` bash
 
--> % python path/to/your/AQUARIUM/info.py detect_circRNA
+-> % python path/to/your/AQUARIUM/info.py profile_circRNA
 
 [CIRC_PROFILE]
 # this section [CIRC_PROFILE] contains following options:
@@ -285,7 +346,7 @@ flag_reject_linear
 # # --help
 ```
 
-As you can see, the output of the command line lists all parameters of the [CIRC_PROFILE] section of the configuration file, along with a brief description of each parameter. 
+As you can see, the output of the command line lists all parameters of the [CIRC_PROFILE] section of the configuration file, along with a brief description of each parameter.
 
 In fact, you can just overwrite the relevant section of the profile with the texts above, and then fill in the key-value pairs afterwards. 
 
@@ -293,7 +354,7 @@ Also, You may notice some commented out key-value pairs. With the help of info.p
 
 ***All path should be absolute path***
 
-### FAQ 
+### FAQ
 
 #### Q: How to complete the parameters in the META section?
 
