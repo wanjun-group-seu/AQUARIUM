@@ -1,8 +1,8 @@
-# AQUARIUM - Accurate QUAntification of Rnas with cIrcUlar isoforMs
+# AQUARIUM - Accurate QUAntification of circulaR Isoforms Using Model-based strategy
 
 ## Introduction
 
-AQUARIUM(Accurate QUAntification of Rnas with cIrcUlar isoforMs) is a bioinformatics analysis pipe line for circular RNA sequencing data.
+AQUARIUM (Accurate QUAntification of circulaR Isoforms Using Model-based strategy) is a bioinformatics analysis pipe line for circular RNA sequencing data.
 
 This pipeline can determine the relative abundance of both linear and circRNA in RNA-seq data under the guidance of a configuration file.
 Since the relative expression abundunce of circular and linear RNAs are unified under the same standard, it avoids the need to introduce other parameters to describe the expression of cyclic RNA in other count-based circular RNA quantification tools.
