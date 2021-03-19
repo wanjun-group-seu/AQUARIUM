@@ -174,7 +174,7 @@ class GTFItem(object):
 
     @staticmethod
     def _check_attribute_string(gtf_attribute):
-        #  todo: this is only for GFF2
+        # this is only for GFF2
 
         # gff2 has
         #         CDS

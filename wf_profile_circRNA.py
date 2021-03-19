@@ -49,6 +49,10 @@ _OPT_KEY_USE_LINC_EXPLICITLY = "flag_use_linc_explicitly"
 
 _OPT_KEY_REJECT_LINEAR = "flag_reject_linear"
 
+_OPT_KEY_KNOWN_CIRC_REF = "known_circ_ref"
+
+_OPT_KEY_KNOWN_CIRC_ANNO = "known_circ_anno"
+
 _QUANTIFIER_BACKEND_OF = {"sailfish": pysrc.wrapper.sailfish,
                           "salmon": pysrc.wrapper.salmon}
 
@@ -138,6 +142,16 @@ def _option_check_main_interface(opts=None):
                 FileNotFoundError(
                     "Error@circular_RNA_profiling: no single end sequence input file"),
                 "path to single-end raw sequencing reads file.")
+
+    oc.may_need(_OPT_KEY_KNOWN_CIRC_REF, os.path.exists,
+                FileNotFoundError(
+                    "Error@circular_RNA_profiling: known circular reference file not exist"),
+                "path to known circular RNA reference file (.fa), ")
+
+    oc.may_need(_OPT_KEY_KNOWN_CIRC_ANNO, os.path.exists,
+                FileNotFoundError(
+                    "Error@circular_RNA_profiling: known circular annotation file not exist"),
+                "path to known circular RNA annotation file (.gtf), ")
 
     oc.may_need(_OPT_KEY_ADDITIONAL_CIRC_REF, os.path.exists,
                 FileNotFoundError(
@@ -244,92 +258,111 @@ def main(path_config, forced_refresh=False):
     circular_rna_gtf = os.path.join(output_path, "circ_only.gtf")
     circ_reference_seq = os.path.join(output_path, "circ_only.fa")
 
+    circ_identified_seq = os.path.join(output_path, "circ_identified.fa")
+
+    known_circ_ref = circ_profile_config.get(_OPT_KEY_KNOWN_CIRC_REF)
+    known_circ_anno = circ_profile_config.get(_OPT_KEY_KNOWN_CIRC_ANNO)
+    circ_known_seq = os.path.join(output_path, "circ_known.fa")
+
     linc_rna_gtf = os.path.join(output_path, "linc_only.gtf")
     linc_reference_seq = os.path.join(output_path, "linc_only.fa")
 
     k = __determine_kmer_length(circ_profile_config)
+    mean_library_length = int(circ_profile_config["--mll"]) if "--mll" in circ_profile_config and \
+                                                               circ_profile_config[{"--mll"}] else 150
 
     # 1st, extract the linear sequence
+
+    lst_linear_fa = []
+    lst_raw_circ_fa = []
+
     if not reject_linear:
         if not os.path.exists(spliced_linear_reference) or forced_refresh:
             _prepare_linear_transcriptome(
                 genome_fa, genomic_annotation, spliced_linear_reference)
             _logger.debug("linear RNA from Genomic Sequence is included")
+            lst_linear_fa.append(spliced_linear_reference)
+    else:
+        _logger.warning("LINEAR ISOFORM REJECTED!")
 
     # 2nd, get the circular RNA gtf sequences
     circular_detection_not_only_bsj = os.path.isdir(circ_detection_report)
     if not os.path.exists(circular_rna_gtf) or forced_refresh:
-        _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, genomic_annotation,
-                                         circular_detection_not_only_bsj)
-
+        bsj_only, partial_structure = _prepare_circular_rna_annotation(circ_detection_report,
+                                                                       circular_rna_gtf,
+                                                                       genomic_annotation,
+                                                                       circular_detection_not_only_bsj)
     # 3rd, extracts circular RNA sequence
     _seq_extractor.do_extract_non_coding_transcript(gff=circular_rna_gtf,
                                                     path_ref_sequence_file=genome_fa,
-                                                    output=circ_reference_seq)
+                                                    output=circ_identified_seq)
+    lst_raw_circ_fa.append(circ_identified_seq)
 
+    if known_circ_anno and os.path.exists(known_circ_anno):
+        path_circ_should_exclude = pysrc.wrapper.ciri_full.filter_out_circRNA_hit_database(
+            bsj_only, partial_structure, known_circ_anno)
+
+        with open(path_circ_should_exclude, "r") as circ_ids:
+            ids_circ = circ_ids.readlines()
+            _logger.debug(
+                "circRNA exclusion, total circRNA should be exclude {}".format(len(ids_circ)))
+
+        tmp_seq = os.path.join(output_path, "tmp_should_remove.fa")
+        pysrc.file_format.fa.filter_fa_by_id(circ_identified_seq, tmp_seq, [
+                                             x.strip() for x in ids_circ])
+        shutil.move(tmp_seq, circ_identified_seq)
+        _logger.debug("{} now has been filtered".format(circ_identified_seq))
+
+        _seq_extractor.do_extract_non_coding_transcript(gff=known_circ_anno,
+                                                        path_ref_sequence_file=genome_fa,
+                                                        output=circ_known_seq)
+        lst_raw_circ_fa.append(circ_known_seq)
+    else:
+        _logger.debug("no valid known annotation....")
     # 4th, do operations on circular RNA reference .lincRNA are treated as linear mRNA
 
-    # mean of effective length use 150 as default
-    mean_library_length = int(circ_profile_config["--mll"]) if "--mll" in circ_profile_config and \
-                                                               circ_profile_config[{"--mll"}] else 150
-
-    _add_adapter_k_mll(circ_reference_seq,
-                       circ_reference_seq, k, mean_library_length)
-
-    # ###### ========================================================
-    # process additional reference . including linc and custom circular RNA 18-12-21
-
-    lst_reference_fa = [circ_reference_seq] if reject_linear else [
-        spliced_linear_reference, circ_reference_seq]
     lst_annotation = [circular_rna_gtf] if reject_linear else [
         genomic_annotation, circular_rna_gtf]
 
     if additional_linear_ref:
-        lst_reference_fa.extend([single_fa for single_fa in additional_linear_ref.strip().split() if os.path.exists(
+        lst_linear_fa.extend([single_fa for single_fa in additional_linear_ref.strip().split() if os.path.exists(
             single_fa)])
 
     if circular_detection_not_only_bsj:
         _logger.debug("transform ciri_full rebuild fa file")
 
-        ciri_full_rebuild_fa_file = pysrc.wrapper.ciri_full.rebuild_fa_path_under(
+        path_cirifull_rebuild_fa = pysrc.wrapper.ciri_full.rebuild_fa_path_under(
             circ_detection_report)
 
-        if ciri_full_rebuild_fa_file:
+        if path_cirifull_rebuild_fa:
             _logger.debug(
-                "ciri-full rebuild circular RNA file found in {}".format(ciri_full_rebuild_fa_file))
-            ciri_full_rebuild_fa_with_short_name = pysrc.wrapper.ciri_full.summarize_rebuild_fa(
-                ciri_full_rebuild_fa_file, os.path.join(output_path, "ciri_full_renamed.fa"))
+                "ciri-full rebuild circular RNA file found in {}".format(path_cirifull_rebuild_fa))
+            cirifull_rebuild_fa_short_id = pysrc.wrapper.ciri_full.summarize_rebuild_fa(
+                path_cirifull_rebuild_fa, os.path.join(output_path, "ciri_full_renamed.fa"))
 
-            # output of this step.
-            rebuild_fa_encoded = os.path.join(output_path, "rebuild_seq.fa")
+            # filter out fa that already in known_circ_ref
 
-            # need adapter-k
+            if known_circ_ref and os.path.exists(known_circ_ref):
+                path_rebuilt_with_refer = os.path.join(
+                    output_path, "rebuilt_and_refer.fa")
+                pysrc.file_format.fa.pool_fa_by_seq_content(
+                    path_rebuilt_with_refer, [cirifull_rebuild_fa_short_id, known_circ_ref])
+                cirifull_rebuild_fa_short_id = path_rebuilt_with_refer
 
-            _add_adapter_k_mll(ciri_full_rebuild_fa_with_short_name,
-                               rebuild_fa_encoded, k, mean_library_length)
-
-            lst_reference_fa.append(rebuild_fa_encoded)
+            lst_raw_circ_fa.append(cirifull_rebuild_fa_short_id)
 
         else:
             _logger.warning(
                 " NO CIRI-FULL rebuild file found under {}".format(circ_detection_report))
 
     if additional_circ_ref:
-        additional_circ_ref_decoded = os.path.join(
-            output_path, "additional_circ_ref.fa")
-
-        # here also need adapter-k
-
-        _add_adapter_k_mll(additional_circ_ref,
-                           additional_circ_ref_decoded, k, mean_library_length)
-
-        lst_reference_fa.append(additional_circ_ref_decoded)
+        lst_raw_circ_fa.append(additional_circ_ref)
 
     if additional_annotation:
         lst_annotation.append(additional_annotation)
 
-    # Wednesday, 5 April 2017: add same procedure for lincRNA
     if use_linc:
+        _logger.debug("linc RNA included")
         if not os.path.exists(linc_rna_gtf) or forced_refresh:
             pysrc.being.linc.prepare_linc_annotation(original_gff=genomic_annotation,
                                                      target_linc_annotation=linc_rna_gtf)
@@ -338,7 +371,8 @@ def main(path_config, forced_refresh=False):
             pysrc.being.linc.prepare_linc_transcriptome_seq(linc_annotation=linc_rna_gtf,
                                                             genomic_seq=genome_fa,
                                                             target_fa=linc_reference_seq)
-        lst_reference_fa.append(linc_reference_seq)
+        _logger.debug("linc RNA stored in {}".format(linc_reference_seq))
+        lst_linear_fa.append(linc_reference_seq)
 
     if preserved_id_file:
         # prepare gtf file
@@ -355,12 +389,23 @@ def main(path_config, forced_refresh=False):
             "sequence for preserved will be stored in {}".format(preserved_fa))
 
         lst_annotation.append(preserved_annotation)
-        lst_reference_fa.append(preserved_fa)
+        lst_linear_fa.append(preserved_fa)
 
     # 5th , combined those fa files
+
+    pysrc.file_format.fa.pool_fa_by_seq_content(
+        circ_reference_seq, lst_raw_circ_fa)
+    _logger.debug("circRNA merged into {}".format(circ_reference_seq))
+
+    _add_adapter_k_mll(circ_reference_seq,
+                       circ_reference_seq, k, mean_library_length)
+    _logger.debug("circRNA has been modified with k-mll adapter")
+    lst_linear_fa.append(circ_reference_seq)
+
     final_refer = os.path.join(output_path, "final.fa")
-    # pysrc.body.utilities.do_merge_files(final_refer, lst_reference_fa)
-    pysrc.file_format.fa.incremental_updating(final_refer, lst_reference_fa)
+    pysrc.file_format.fa.incremental_updating(final_refer, lst_linear_fa)
+    _logger.debug(
+        "reference fa has been merged into one file: {}".format(final_refer))
 
     # linc RNA is already in original gtf file
     final_annotation = os.path.join(output_path, "final.gtf")
@@ -479,20 +524,24 @@ def _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, ge
 
         partial_gtf = os.path.join(dir_par, "partial_structure.gtf")
         _logger.debug(
-            "circular RNA with partial structure information is in {}".join(partial_gtf))
-        pysrc.wrapper.ciri_full.summarize_circ_isoform_structure_marked_break(ciri_full_list_file, genomic_annotation,
-                                                                              partial_gtf, dir_par)
+            "circular RNA with partial structure information is in {}".format(partial_gtf))
+        bed_circ_exon, bed_blank = pysrc.wrapper.ciri_full.make_gtf_for_break_isoform(path_vis_list=ciri_full_list_file,
+                                                                                      genomic_gtf=genomic_annotation,
+                                                                                      target_gtf=partial_gtf,
+                                                                                      tmp_dir=dir_par)
 
         pysrc.body.utilities.do_merge_files(
             circular_rna_gtf, [bsj_only_gtf, partial_gtf])
+
         _logger.debug("the final circular exclusive annotation file is : {} ".format(
             circular_rna_gtf))
-
+        return bed_bsj_only, bed_circ_exon
     else:
         _logger.debug("building circRNA GTF using BSJ information only")
         _gtf_operator.do_make_gtf_for_circular_prediction_greedy(circular_candidate_regions=circ_detection_report,
                                                                  gff_db=genomic_annotation,
                                                                  output_gtf_path_name=circular_rna_gtf)
+        return circ_detection_report, None
 
 
 def _prepare_linear_transcriptome(genome_fa, genomic_annotation, spliced_linear_reference):
@@ -529,7 +578,7 @@ def _confirm_quantifier(circ_profile_config):
     return quantifier
 
 
-def _find__r_script(basename_r):
+def _find_r_script(basename_r):
     path_current_script = os.path.abspath(os.path.realpath(__file__))
     dir_r = os.path.dirname(path_current_script)
     path_r_script = os.path.join(dir_r, "R", basename_r)
@@ -538,14 +587,16 @@ def _find__r_script(basename_r):
 
 def _post_quantify(sf_in, anno, tab_out):
     # process the isoform level sf file ,and calculate the ratio for DE
-    path_r_script = _find__r_script("post_ratio.R")
+    path_r_script = _find_r_script("post_ratio.R")
     # Rscript post_ratio.R gtf sf ratio_out
-    
+
     if not os.path.exists(sf_in):
-        _logger.error("NO sf_in file in {} ! unable to calculate the ratio".format(sf_in))
+        _logger.error(
+            "NO sf_in file in {} ! unable to calculate the ratio".format(sf_in))
         return None
     if not os.path.exists(anno):
-        _logger.error("NO genomic annotation  in {} ! unable to calculate the ratio".format(anno))
+        _logger.error(
+            "NO genomic annotation  in {} ! unable to calculate the ratio".format(anno))
         return None
 
     cmd = " ".join(["Rscript", path_r_script, anno, sf_in, tab_out])

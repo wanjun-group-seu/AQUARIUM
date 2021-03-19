@@ -243,7 +243,7 @@ def bwa_mapping_ciri_only(meta_setting, **kwargs):
         "read_file": read_file,
         "bwa_index": index_bwa,
         "-T": bwa_score_cutoff,
-        "-t": str(core_used),  # todo: here we use all the cpu cores, greedy...
+        "-t": str(core_used),  # here we use all the cpu cores, greedy...
     }, output=sam)
 
 

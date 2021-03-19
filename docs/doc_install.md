@@ -8,12 +8,10 @@ This pipeline does not need to be compiled, but it will only run successfully wi
 
 If [git](https://git-scm.com) is installed, you can download this pipeline using following command.
 
-<!-- todo 修改为最终路径 -->
 ``` bash
 git clone 
 ```
 
-<!-- todo 下载的路径 -->
 You can also download the package as a zip file and unzip it manually.
 
 Also [Python 3](https://www.python.org) and [R](https://www.r-project.org) need to be installed before you can proceed with the following steps.

@@ -37,6 +37,7 @@ _OPT_JAR_VIS_PATH = "jar_vis"
 
 BASE_NAME_R_SCRIPT_TRANSFORM_LIST = "transform_ciri_vis_list_exon.R"
 BASE_NAME_R_SCRIPT_FILTER_BSJ = "filter_untouched_bsj.R"
+BASE_NAME_R_SCRIPT_HIT_DATABASE = "filter_out_seq_hit_reference.R"
 
 __doc__ = '''this is the wrapper of CIRI-AS, attention: this wrapper will output all information by default .
 '''
@@ -414,7 +415,7 @@ def translate_vis_list(path_vis_list, tmp_dir=""):
     dir_parpar = os.path.dirname(dir_par)
 
     path_bed_circexon, path_bed_blank = os.path.join(
-        dir_parpar, "circexon.bed"), os.path.join(dir_parpar, "blank.bed")
+        dir_par, "circexon.bed"), os.path.join(dir_par, "blank.bed")
 
     # what if those two file already exists ? replace it with a new name.
     if os.path.exists(path_bed_circexon) or os.path.exists(path_bed_blank):
@@ -529,7 +530,7 @@ def _bed2gtf(bed):
     )
 
 
-def summarize_circ_isoform_structure_marked_break(path_vis_list, genomic_gtf, summarized_gtf, tmp_dir=""):
+def make_gtf_for_break_isoform(path_vis_list, genomic_gtf, target_gtf, tmp_dir=""):
 
     path_bed_circ_exon, path_bed_blank = translate_vis_list(
         path_vis_list, tmp_dir)
@@ -540,7 +541,8 @@ def summarize_circ_isoform_structure_marked_break(path_vis_list, genomic_gtf, su
                                                path_bed_circ_exon))
 
     pysrc.file_format.bsj_gtf.exons_to_gtf_file(
-        whole_exon_generator, summarized_gtf)
+        whole_exon_generator, target_gtf)
+    return path_bed_circ_exon, path_bed_blank
 
 
 def _rename_rebuild_fa(fa_file_in, use_suffix=True):
@@ -574,6 +576,33 @@ def summarize_rebuild_fa(fa_in, fa_out, use_suffix=True):
                                  for seq in _rename_rebuild_fa(fa_in, use_suffix)]))
     return fa_out
 
+
+def filter_out_circRNA_hit_database(path_bed_untouch, path_bed_partial, path_know_gtf, tmp_dir=""):
+    _logger.debug(
+        "start filter out those circRNA which already in known database {}".format(path_know_gtf))
+
+    path_r_script = _find_that_r_script(BASE_NAME_R_SCRIPT_HIT_DATABASE)
+
+    _logger.debug(
+        "external R script will be invoked : {}".format(path_r_script))
+
+    dir_par = tmp_dir if tmp_dir else os.path.dirname(path_bed_untouch)
+
+    path_circ_id = os.path.join(dir_par, "circ_already_in_database.id")
+
+    _logger.debug("output bed file will in : {}".format(path_circ_id))
+
+    r_args = ["Rscript", path_r_script, path_bed_untouch, path_bed_partial,
+              path_know_gtf, path_circ_id]
+
+    cmd_r = " ".join(r_args)
+
+    _logger.debug(
+        """external cmd for finding circRNA in database: is:\n  {} \n""".format(cmd_r))
+
+    pysrc.body.worker.run(cmd_r)
+
+    return path_circ_id
 
 if __name__ == "__main__":
     print(__doc__)

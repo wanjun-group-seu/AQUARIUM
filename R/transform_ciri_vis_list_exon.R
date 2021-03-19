@@ -16,7 +16,8 @@
 # check dependency  and try install missing package -----------------------
 #' use base R , no additional package needed .
 
-# clean environment and load packages --------------------------------------------------------
+# clean environment and load packages ------------------
+
 base::rm(list = base::ls())
 
 adhoc_load_list <- function(path_list) {
@@ -115,11 +116,20 @@ end_of_region <- function(s) {
 }
 
 start_of_bsj <- function(s) {
-    as.numeric(base::regmatches(s, base::regexpr("(?<=\\:)\\d+(?=|)", s, perl = T)))
+    as.numeric(base::regmatches(
+        s,
+        base::regexpr("(?<=\\:)\\d+(?=|)", s, perl = T)
+    ))
 }
 
 end_of_bsj <- function(s) {
-    as.numeric(base::regmatches(s, base::regexpr("(?<=\\|)\\d+(?=\\.*)", s, perl = T)))
+    as.numeric(base::regmatches(
+        s,
+        base::regexpr("(?<=\\|)\\d+(?=\\.*)",
+            s,
+            perl = T
+        )
+    ))
 }
 
 chr_of_bsj <- function(s) {
@@ -143,10 +153,9 @@ add_unique_id <- function(df_lst) {
     isoform_state_suffix <-
         ifelse(df_lst$isoform_state == "Full", ".f", ".b")
     count_suffix <- count_suffix_of(df_lst$bsj)
-    
+
     df_lst$uid <-
         base::paste0(df_lst$bsj, isoform_state_suffix, count_suffix)
-    
     return(df_lst)
 }
 
@@ -278,9 +287,14 @@ df_lst <- add_unique_id(df_lst)
 df_partial_isoform <-
     base::subset(df_lst, df_lst$isoform_state == "Break")
 
+helper_make_empty_bed_file <- function() {
+    file.create(exon_bed_path)
+    file.create(empty_bed_path)
+}
+
 
 if (dim(df_partial_isoform)[1] < 1) {
-    file.create(exon_bed_path)
+    helper_make_empty_bed_file()
     cat("\n all your bsj sequence is intact, nothing to do here, quitting \n")
     
 } else{

@@ -197,7 +197,8 @@ def __report_denovo_read1_only(dir_knife, gene_id_mapping=None):
     return bed_lines
 
 
-def __infer_knife_output_directory(cfg_file):  # todo: here we confirmed that this is a configuration file
+# here we confirmed that this is a configuration file
+def __infer_knife_output_directory(cfg_file):
     if os.path.exists(cfg_file) and os.path.isfile(cfg_file):
         user_config = pysrc.body.config.config(cfg_file)
         dir_par = user_config[pysrc.wrapper.knife.SECTION_DETECT][pysrc.wrapper.knife._OPT_ALIGNMENT_PARENT_DIRECTORY]

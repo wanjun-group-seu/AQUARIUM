@@ -75,3 +75,37 @@ def incremental_updating(target_fa, list_of_fa_file):
         _logger.warning("list contains no fa file , so no action taken ")
         import pathlib
         pathlib.Path(target_fa).touch()
+
+
+def pool_fa_by_seq_content(path_target, lst_fa):
+    # seq using id in latter fa files of lst_fa
+    if lst_fa:
+        _logger.debug("now pool those fa together, {}".format(
+            "\n".join(lst_fa)))
+        dict_seq = {}
+        for one_fa in lst_fa:
+            if not os.path.exists(one_fa):
+                _logger.warning(" no such file in {}".format(one_fa))
+            else:
+                for x in Bio.SeqIO.parse(one_fa, "fasta"):
+                    dict_seq[str(x.seq).strip()] = x.id.strip()
+
+        dict_seq_final = {v: k for k, v in dict_seq.items()}
+        with open(path_target, "a") as dump_fa:
+            for x in dict_seq_final:
+                dump_fa.write(">{name}\n{sequence}\n".format(name=x,
+                                                             sequence=dict_seq_final[x]))
+
+    else:
+        _logger.warning("list of fa has NONE content , no action taken")
+        import pathlib
+        pathlib.Path(path_target).touch()
+
+
+def filter_fa_by_id(path_raw, path_target, id_lst):
+
+    with open(path_target, "a") as dump_fa:
+        for x in Bio.SeqIO.parse(path_raw, "fasta"):
+            if x.id.strip() not in id_lst:
+                dump_fa.write(">{name}\n{sequence}\n".format(name=x.id.strip(),
+                                                             sequence=str(x.seq).strip()))
