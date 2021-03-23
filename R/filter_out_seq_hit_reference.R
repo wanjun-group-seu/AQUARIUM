@@ -2,7 +2,8 @@
 
 base::rm(list = base::ls())
 
-
+library(dplyr)
+library(magrittr)
 library(rtracklayer)
 library(GenomicRanges)
 
@@ -97,10 +98,10 @@ load_untouched_bed_as_gr <- function(path_untouched_bed) {
 #' @examples
 which_sample_is_total_picked_out <-
   function(sample_part, population) {
-    df_sample_cnt <- table(sample_part) %>% as.data.frame()
+    df_sample_cnt <- as.data.frame(table(sample_part))
     names(df_sample_cnt) <- c("name", "cnt_sample")
 
-    df_population_cnt <- table(population) %>% as.data.frame()
+    df_population_cnt <- as.data.frame(table(population))
     names(df_population_cnt) <- c("name", "cnt_population")
 
     df_which_is_total_picked_out <-
@@ -109,10 +110,35 @@ which_sample_is_total_picked_out <-
     as.character(df_which_is_total_picked_out$name)
   } # end of function: which_sample_is_total_picked_out
 
+
+#' print something into log
+#'
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
+say_log <- function(...) {
+  cat("\n")
+  cat(paste(..., sep = " ", collapse = "\n "))
+  cat("\n")
+} # end of function: say_log
+
+
+helper_pick_first_occur <- function(some_gr, name) {
+  some_gr[match(name, some_gr$name)]
+}
+
+
+
+helper_pick_by_name <- function(some_gr, name) {
+  some_gr[some_gr$name == name]
+}
 # load the data ----------------------------------------------------------
 
 
-cat(paste0("\n", "Find circRNA already in database"))
+cat(paste0("\n", "Start finding circRNA that hit known database"))
 
 given_args <- commandArgs(trailingOnly = T)
 
@@ -132,21 +158,23 @@ path_partial_bed <- given_args[2]
 path_anno <- given_args[3]
 path_output <- given_args[4]
 
-stopifnot()
 
-known_gr <- load_gtf_as_gr(path_anno, format = "GFF3")
+say_log("start loading known database GTF file ....")
+known_gr <- load_gtf_as_gr(path_anno, format = "GFF")
 
 if (file.exists(path_partial_bed)) {
   partial_gr <- load_untouched_bed_as_gr(path_partial_bed)
 } else {
+  say_log("no partial circRNA ....")
   partial_gr <- NULL
 }
 
 if (file.exists(path_untouch_bed)) {
-  if (endsWith(path_untouch_bed, ".bed")) {
+  if (length(grep(".bed$", path_untouch_bed))>0) {
+    say_log("loading untouched bsj...:", path_untouch_bed)
     untouched_gr <- load_untouched_bed_as_gr(path_untouch_bed)
   } else {
-    cat("\n loading untouched bsj from ciri report \n")
+    say_log("loading untouched bsj from ciri report", path_untouch_bed)
     ciri_report <- load_ciri_report(path_untouch_bed)
     untouched_gr <-
       GenomicRanges::GRanges(
@@ -167,62 +195,80 @@ if (file.exists(path_untouch_bed)) {
 
 # check partial part ------------------------------------------------------
 
-check_partial_part <- function(partial_gr, known_gr) {
+check_partial_part <- function(partial_gr, known_gr, verbose=F) {
   if (is.null(partial_gr)) {
+    say_log("no partial circRNA, so no circRNA hit database")
     return(NULL)
   }
 
-  hitpart <- partial_gr[partial_gr %in% known_gr]
-  bsj_all_exon_hit <-
-    which_sample_is_total_picked_out(hitpart$name, partial_gr$name)
 
-  hitpart_likely <- hitpart[hitpart$name %in% bsj_all_exon_hit]
+  partial_that_hits <- partial_gr[partial_gr %in% known_gr]
 
-  hits_pair <- findMatches(hitpart_likely, known_gr)
+  partial_id_all_exon_hits <-
+    which_sample_is_total_picked_out(partial_that_hits$name, partial_gr$name)
 
-  df_hits_pair <-
+  partial_all_hits <-
+    partial_that_hits[partial_that_hits$name %in% partial_id_all_exon_hits]
+
+  exon_hits_pair <- findMatches(partial_all_hits, known_gr)
+
+  df_exon_hits_pair <-
     data.frame(
-      "name_from" = hitpart_likely$name[hits_pair@from],
-      "name_to" = known_gr$name[hits_pair@to],
-      "from" = hits_pair@from,
-      "to" = hits_pair@to
+      "name_from" = partial_all_hits$name[exon_hits_pair@from],
+      "name_to" = known_gr$name[exon_hits_pair@to],
+      "from" = exon_hits_pair@from,
+      "to" = exon_hits_pair@to
     )
 
-  circ_need_check <- unique(hitpart_likely$name)
 
-  #' 如果所有exon都在某个已知的isoform中, 那么就是命中了
-  circ_all_in_known_isoform <- sapply(circ_need_check, function(x) {
-    df_tmp <- df_hits_pair %>% dplyr::filter(name_from == x)
+  circ_need_check <- unique(partial_all_hits$name)
+  tx_cover_this_circ <- sapply(circ_need_check, function(x) {
+    df_tmp <- df_exon_hits_pair %>% dplyr::filter(name_from == x)
     count_tmp <- table(df_tmp$name_to, df_tmp$from) %>% as.matrix()
-    any(apply(count_tmp, 1, function(x) {
+
+    is_tx_cover_circ <- apply(count_tmp, 1, function(x) {
       all(x > 0)
-    }))
+    })
+
+    if (any(is_tx_cover_circ)) {
+      rownames(count_tmp)[which(is_tx_cover_circ)[1]]
+    } else{
+      NA
+    }
   })
 
-  circ_need_check[circ_all_in_known_isoform]
-}
+  if (verbose) {
+    data.frame("circ" = circ_need_check,
+               "known_tx" = tx_cover_this_circ)
+
+  } else{
+    return(circ_need_check[!is.na(tx_cover_this_circ)])
+  }
+} # end of function: check_partial_part
+
 partial_circ_hit_known <- check_partial_part(partial_gr, known_gr)
+say_log("partial circRNA checked , total ", length(partial_circ_hit_known), "found ")
+
 # check only bsj part -----------------------------------------------------
 
-check_untouch_bsj <- function(untouched_gr, known_gr) {
+check_untouch_bsj <- function(untouched_gr, known_gr, verbose = F) {
   if (is.null(untouched_gr)) {
+    say_log("no untouched bsj ....")
     return(NULL)
   }
 
   untouch5 <-
     resize(untouched_gr,
-      width = 2,
-      fix = "end",
-      use.names = T
-    )
+           width = 2,
+           fix = "end",
+           use.names = T)
   untouch5$side <- "p5"
 
   untouch3 <-
     resize(untouched_gr,
-      width = 2,
-      fix = "start",
-      use.names = T
-    )
+           width = 2,
+           fix = "start",
+           use.names = T)
   untouch3$side <- "p3"
 
   untouch_end <- c(untouch5, untouch3)
@@ -237,7 +283,9 @@ check_untouch_bsj <- function(untouched_gr, known_gr) {
       "from" = hit_untouch_end@from,
       "to" = hit_untouch_end@to
     )
-  #' 移除只命中一边的.
+
+
+#' 移除只命中单边的.
   df_side_align <-
     df_hit_untouch %>%
     dplyr::group_by(name_from, name_to) %>%
@@ -268,14 +316,23 @@ check_untouch_bsj <- function(untouched_gr, known_gr) {
 
   match_of_bsj <- match(untouch_hit_both, range_gr)
 
-  untouch_hit_both$name[!is.na(match_of_bsj)]
-}
+  if (verbose) {
+    df_res <- data.frame("circ" = untouch_hit_both$name,
+                         "known_tx" = match_of_bsj) %>% dplyr::filter(!is.na(known_tx))    %>% dplyr::mutate(known_tx = as.character(range_gr$name)[known_tx])
+    return(df_res)
+  } else{
+    return(untouch_hit_both$name[!is.na(match_of_bsj)])
+  }
+} # end of function: check_untouch_bsj
 
 untouch_circ_hit_known <- check_untouch_bsj(untouched_gr, known_gr)
-
+say_log("BSJ checked, total ", length(untouch_circ_hit_known), "found.")
 
 # combine two parts -------------------------------------------------------
 
 id_hit_known <- c(partial_circ_hit_known, untouch_circ_hit_known)
 
 writeLines(id_hit_known, path_output)
+
+say_log("circRNA ID exported to ", path_output)
+say_log("total ", length(id_hit_known), " inside. ")
