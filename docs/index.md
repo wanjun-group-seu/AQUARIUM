@@ -9,7 +9,7 @@ Since the relative expression abundunce of circular and linear RNAs are unified 
 
 It accepts output of circRNA identification tools (CIRI, CIRI-full) or a BED-format file to specify the circular RNA transcripts. Then, it transforms all circular transcripts to pseudo-linear transcripts. Finally, it estimates the expression of both linear and circular transcripts using salmon framework.
 
-
+Code written in python and R, and published under mit license.
 
 ## Installation
 

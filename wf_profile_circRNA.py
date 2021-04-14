@@ -172,14 +172,14 @@ def _option_check_main_interface(opts=None):
                 KeyError(
                     "Error@circular_RNA_profiling: incorrect flag to specify whether linc should be explicit"),
                 """flag to specify whether linc RNA should be include in quantification result, commenting it out to 
-                set False
+                set False, assign "T" "True" to set True.
                 """)
 
     oc.may_need(_OPT_KEY_REJECT_LINEAR, lambda x: x in ("T", "F", "True", "False", ""),
                 KeyError("""Error@circular_RNA_profiling: incorrect flag to specify whether index should reject 
                 linear RNA"""),
                 """flag to specify whether to reject linear RNA during quantification, for example for a RNase R  
-                treated sample, comment it out to set False"""
+                treated sample, comment it out to set False, assign "T" "True" to set True."""
                 )
 
     oc.forbid_these_args("-h", "--help")
