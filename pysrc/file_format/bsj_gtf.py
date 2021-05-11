@@ -310,9 +310,9 @@ def equal_divide(regs, num_process):
 
 
 def do_make_gtf_for_circular_prediction_greedy(circular_candidate_regions, gff_db, output_gtf_path_name="",
-                                               is_isoform_structure_shown=False):
+                                               is_isoform_structure_shown=False, num_core=None):
     whole_exons = intersect_region_genome_annotation(
-        circular_candidate_regions, gff_db, is_isoform_structure_shown)
+        circular_candidate_regions, gff_db, is_isoform_structure_shown, num_core)
 
     exons_to_gtf_file(whole_exons, output_gtf_path_name)
 
@@ -325,8 +325,10 @@ def exons_to_gtf_file(whole_exons, output_gtf_path_name):
 
 
 def intersect_region_genome_annotation(circular_candidate_regions, genomic_annotation,
-                                       is_isoform_structure_shown=False):
-    num_core = guess_num_core()
+                                       is_isoform_structure_shown=False, num_core=None):
+    if not num_core:                                       
+        num_core = guess_num_core()
+
     _logger.debug(
         "Number of CPU use during GTF generating : {}".format(num_core))
     regions = load_region_from_file(circular_candidate_regions)

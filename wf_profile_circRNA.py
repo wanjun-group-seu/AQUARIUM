@@ -240,6 +240,8 @@ def main(path_config, forced_refresh=False):
 
     output_path = catch_one(circ_profile_config, "-o")
 
+    num_core = int(whole_config["META"]["num_thread"]) if "num_thread" in whole_config["META"] else None # todo: change to a robust version
+
     # additional options
     additional_circ_ref = circ_profile_config.get(_OPT_KEY_ADDITIONAL_CIRC_REF)
     additional_annotation = circ_profile_config.get(
@@ -288,10 +290,11 @@ def main(path_config, forced_refresh=False):
     # 2nd, get the circular RNA gtf sequences
     circular_detection_not_only_bsj = os.path.isdir(circ_detection_report)
     if not os.path.exists(circular_rna_gtf) or forced_refresh:
-        bsj_only, partial_structure = _prepare_circular_rna_annotation(circ_detection_report,
-                                                                       circular_rna_gtf,
-                                                                       genomic_annotation,
-                                                                       circular_detection_not_only_bsj)
+        bsj_only, partial_structure = _prepare_circular_rna_annotation(circ_detection_report= circ_detection_report,
+                                                                       circular_rna_gtf= circular_rna_gtf,
+                                                                       genomic_annotation= genomic_annotation,
+                                                                       detection_not_only_bsj=circular_detection_not_only_bsj,
+                                                                       num_core=num_core)
     # 3rd, extracts circular RNA sequence
     _seq_extractor.do_extract_non_coding_transcript(gff=circular_rna_gtf,
                                                     path_ref_sequence_file=genome_fa,
@@ -452,6 +455,9 @@ def main(path_config, forced_refresh=False):
     opts_quantifier["--output"] = path_to_quantify_result
     opts_quantifier["--geneMap"] = final_annotation
 
+    if num_core and num_core > 1:
+        opts_quantifier["--threads"] = num_core
+
     # # on salmon's bias model
     if quantifier is pysrc.wrapper.salmon:
         opts_quantifier["--seqBias"] = None
@@ -492,7 +498,7 @@ def _add_adapter_k_mll(raw_circ_seq, decorated_seq, k, mean_library_length):
 
 
 def _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, genomic_annotation,
-                                     detection_not_only_bsj):
+                                     detection_not_only_bsj, num_core=None):
     # this means use ciri-full as circRNA detection source.
     if detection_not_only_bsj:
 
@@ -519,8 +525,12 @@ def _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, ge
             "annotation for BSJ only will be put in : {}".format(bsj_only_gtf))
         _logger.debug(
             "genomic annotation source is from : {} . ".format(genomic_annotation))
+
         _gtf_operator.do_make_gtf_for_circular_prediction_greedy(
-            bed_bsj_only, genomic_annotation, bsj_only_gtf)
+            circular_candidate_regions=bed_bsj_only,
+            gff_db=genomic_annotation,
+            output_gtf_path_name=bsj_only_gtf,
+            num_core=num_core)
 
         partial_gtf = os.path.join(dir_par, "partial_structure.gtf")
         _logger.debug(
@@ -528,7 +538,8 @@ def _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, ge
         bed_circ_exon, bed_blank = pysrc.wrapper.ciri_full.make_gtf_for_break_isoform(path_vis_list=ciri_full_list_file,
                                                                                       genomic_gtf=genomic_annotation,
                                                                                       target_gtf=partial_gtf,
-                                                                                      tmp_dir=dir_par)
+                                                                                      tmp_dir=dir_par,
+                                                                                      num_core=num_core)
 
         pysrc.body.utilities.do_merge_files(
             circular_rna_gtf, [bsj_only_gtf, partial_gtf])
@@ -540,7 +551,8 @@ def _prepare_circular_rna_annotation(circ_detection_report, circular_rna_gtf, ge
         _logger.debug("building circRNA GTF using BSJ information only")
         _gtf_operator.do_make_gtf_for_circular_prediction_greedy(circular_candidate_regions=circ_detection_report,
                                                                  gff_db=genomic_annotation,
-                                                                 output_gtf_path_name=circular_rna_gtf)
+                                                                 output_gtf_path_name=circular_rna_gtf,
+                                                                 num_core=num_core)
         return circ_detection_report, None
 
 

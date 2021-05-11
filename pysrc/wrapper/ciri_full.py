@@ -480,12 +480,13 @@ def _find_that_r_script(basename_r):
     return path_r_script
 
 
-def exons_within_blank_region(bed_file_show_blank_region, genomic_annotation):
+def exons_within_blank_region(bed_file_show_blank_region, genomic_annotation, num_core=None):
     bed_objs = load_bed_as_tuple(bed_file_show_blank_region)
     host_gene_of = dict([(str(x.name), str(x.itemRGB)) for x in bed_objs])
 
-    exons_inside_blank_region = pysrc.file_format.bsj_gtf.intersect_region_genome_annotation(bed_file_show_blank_region,
-                                                                                             genomic_annotation)
+    exons_inside_blank_region = pysrc.file_format.bsj_gtf.intersect_region_genome_annotation(circular_candidate_regions=bed_file_show_blank_region,
+                                                                                             genomic_annotation=genomic_annotation,
+                                                                                             num_core=num_core)
 
     for single_exon in exons_inside_blank_region:
         single_exon.set_gene_id(host_gene_of.get(
@@ -530,13 +531,13 @@ def _bed2gtf(bed):
     )
 
 
-def make_gtf_for_break_isoform(path_vis_list, genomic_gtf, target_gtf, tmp_dir=""):
+def make_gtf_for_break_isoform(path_vis_list, genomic_gtf, target_gtf, tmp_dir="", num_core=None):
 
     path_bed_circ_exon, path_bed_blank = translate_vis_list(
         path_vis_list, tmp_dir)
 
     import itertools
-    whole_exon_generator = itertools.chain(exons_within_blank_region(path_bed_blank, genomic_gtf),
+    whole_exon_generator = itertools.chain(exons_within_blank_region(path_bed_blank, genomic_gtf, num_core=num_core),
                                            exons_directly_from_bed_file(
                                                path_bed_circ_exon))
 
