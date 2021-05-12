@@ -274,6 +274,8 @@ def get_gtf_mp(regions, gff_db, is_structure_show=False, num_process=1):
         a = SimpleMapReduce(_get_exons, _all_exons_as_list, num_process)
 
     result = a(zip(region_groups_for_each_cpu, gff_db_each_cpu))
+
+    _logger.debug("total {} threads used !".format(num_process))
     return result
 
 
